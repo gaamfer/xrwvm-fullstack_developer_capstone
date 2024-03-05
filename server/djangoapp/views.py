@@ -1,5 +1,3 @@
-# Uncomment the required imports before adding the code
-
 from django.shortcuts import render
 from django.http import HttpResponseRedirect, HttpResponse
 from django.contrib.auth.models import User
@@ -7,6 +5,7 @@ from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib.auth import logout
 from django.contrib import messages
 from datetime import datetime
+from .models import CarMake, CarModel
 
 from django.http import JsonResponse
 from django.contrib.auth import login, authenticate
@@ -19,57 +18,65 @@ from .populate import initiate
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
 
-
 # Create your views here.
+
+def get_cars(request):
+	count = CarMake.objects.filter().count()
+	print(count)
+	if(count == 0):
+		initiate()
+	car_models = CarModel.objects.select_related('make')
+	cars = []
+	for car_model in car_models:
+		cars.append({"CarModel":car_model.name, "CarMake": car_model.car_make.name})
+	return JsonResponse({"CarModels": cars})
 
 # Create a `login_request` view to handle sign in request
 @csrf_exempt
 def login_user(request):
-    # Get username and password from request.POST dictionary
-    data = json.loads(request.body)
-    username = data['userName']
-    password = data['password']
-    # Try to check if provide credential can be authenticated
-    user = authenticate(username=username, password=password)
-    data = {"userName": username}
-    if user is not None:
-        # If user is valid, call login method to login current user
-        login(request, user)
-        data = {"userName": username, "status": "Authenticated"}
-    return JsonResponse(data)
+	# Get username and password from request.POST dictionary
+	data = json.loads(request.body)
+	username = data['userName']
+	password = data['password']
+	# Try to check if provide credential can be authenticated
+	user = authenticate(username=username, password=password)
+	data = {"userName": username}
+	if user is not None:
+		# If user is valid, call login method to login current user
+		login(request, user)
+		data = {"userName": username, "status": "Authenticated"}
+	return JsonResponse(data)
 
 # Create a `logout_request` view to handle sign out request
 def logout_request(request):
-    logout(request)
-    data = {"Username":""}
-    return JsonResponse(data)
+	logout(request)
+	data = {"Username":""}
+	return JsonResponse(data)
 # ...
 
 @csrf_exempt
 def registration_request(request):
-    data = json.loads(request.body)
-    username = data['userName']
-    firstname = data['firstName']
-    last_name = data['lastName']
-    password = data['password']
-    email = data['email']
-    user_exists=False
-    try:
-        User.objects.get(username=username)
-        user_exists = True
-    except: 
-        logger.debug("{} is new user." .format(username))
+	data = json.loads(request.body)
+	username = data['userName']
+	firstname = data['firstName']
+	last_name = data['lastName']
+	password = data['password']
+	email = data['email']
+	user_exists=False
+	try:
+		User.objects.get(username=username)
+		user_exists = True
+	except: 
+		logger.debug("{} is new user." .format(username))
 
-    if not user_exists:
-        user = User.objects.create_user(username=username, first_name=firstname, last_name=last_name, password=password, email=email)
-        login(request, user)
-        data = {"userName":username,"status":"Authenticated"}
-        return JsonResponse(data)
-    else :
-        data = {"userName": username, "error":"Already registered!"}
-        return JsonResponse(data)
-
-# ...
+	if not user_exists:
+		user = User.objects.create_user(username=username, first_name=firstname, last_name=last_name, password=password, email=email)
+		login(request, user)
+		data = {"userName":username,"status":"Authenticated"}
+		return JsonResponse(data)
+	else :
+		data = {"userName": username, "error":"Already registered!"}
+		return JsonResponse(data)
 
 # # Update the `get_dealerships` view to render the index page with
 # a list of dealerships
